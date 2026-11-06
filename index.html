@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Generator RPM - Andri Ardi Wilandra</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- html2pdf for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Dynamic Aurora Background */
+        @keyframes aurora {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .aurora-bg {
+            background: linear-gradient(-45deg, #0f172a, #1e1b4b, #1e3a8a, #020617);
+            background-size: 400% 400%;
+            animation: aurora 15s ease infinite;
+            min-height: 100vh;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+        
+        .glass-input {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: #38bdf8;
+            box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        /* Particles cursor effect container */
+        #particles {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Print Mode Styling */
+        .print-canvas {
+            background-color: white;
+            color: black;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            margin: 0 auto;
+            padding: 2cm;
+            min-height: 29.7cm;
+            width: 100%;
+            max-width: 21cm; /* A4 width */
+        }
+        
+        .rpm-table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }
+        .rpm-table th, .rpm-table td { border: 1px solid #000; padding: 10px; text-align: left; vertical-align: top; }
+        .rpm-table th { background-color: #0284c7 !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; text-align: center; }
+
+        @media print {
+            body { background: white !important; }
+            .no-print { display: none !important; }
+            .print-canvas {
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            .rpm-table th { background-color: #0284c7 !important; color: white !important; -webkit-print-color-adjust: exact; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="aurora-bg text-slate-100 flex flex-col relative overflow-x-hidden">
+    
+    <div id="particles"></div>
+
+    <!-- Main Container -->
+    <div class="relative z-10 container mx-auto px-4 py-8 max-w-4xl" id="app-container">
+        
+        <!-- Header -->
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-blue-200 mb-2 drop-shadow-lg">
+                AI Generator RPM
+            </h1>
+            <p class="text-blue-200">Rencana Pembelajaran Mendalam (Deep Learning)</p>
+            <p class="text-xs text-slate-400 mt-2">Developed by: Andri Ardi Wilandra</p>
+        </div>
+
+        <!-- Form Setup -->
+        <div id="setup-section" class="glass-panel rounded-2xl p-6 md:p-8 fade-in">
+            <form id="rpm-form" onsubmit="generateRPM(event)">
+                
+                <!-- 1. Data Pembelajaran -->
+                <h2 class="text-xl font-bold text-sky-400 border-b border-slate-600 pb-2 mb-4">
+                    <i class="fa-solid fa-book-open mr-2"></i> 1. Data Pembelajaran
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div><label class="block text-sm mb-1">Mata Pelajaran</label><input type="text" id="inp-mapel" required class="w-full p-2 rounded-lg glass-input" placeholder="Cth: Ilmu Pengetahuan Alam (IPA)"></div>
+                    <div><label class="block text-sm mb-1">Materi / Topik Pokok</label><input type="text" id="inp-topik" required class="w-full p-2 rounded-lg glass-input" placeholder="Cth: Siklus Air"></div>
+                    <div><label class="block text-sm mb-1">Fase Kurikulum</label>
+                        <select id="inp-fase" class="w-full p-2 rounded-lg glass-input text-slate-900">
+                            <option value="A">Fase A (Kelas 1-2)</option>
+                            <option value="B" selected>Fase B (Kelas 3-4)</option>
+                            <option value="C">Fase C (Kelas 5-6)</option>
+                        </select>
+                    </div>
+                    <div><label class="block text-sm mb-1">Kelas</label><input type="text" id="inp-kelas" required class="w-full p-2 rounded-lg glass-input" placeholder="Cth: IV (Empat)"></div>
+                    <div><label class="block text-sm mb-1">Semester</label>
+                        <select id="inp-semester" class="w-full p-2 rounded-lg glass-input text-slate-900">
+                            <option value="Ganjil">1 (Ganjil)</option>
+                            <option value="Genap">2 (Genap)</option>
+                        </select>
+                    </div>
+                    <div><label class="block text-sm mb-1">Tahun Ajaran</label><input type="text" id="inp-ta" class="w-full p-2 rounded-lg glass-input" value="2025/2026"></div>
+                    <div><label class="block text-sm mb-1">Alokasi Waktu (Menit)</label><input type="number" id="inp-waktu" required class="w-full p-2 rounded-lg glass-input" placeholder="Cth: 70"></div>
+                    <div><label class="block text-sm mb-1">Model Pembelajaran</label><input type="text" id="inp-model" required class="w-full p-2 rounded-lg glass-input" placeholder="Cth: Problem Based Learning"></div>
+                </div>
+
+                <!-- Personal Info -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div><label class="block text-sm mb-1">Nama Penyusun/Guru</label><input type="text" id="inp-guru" required class="w-full p-2 rounded-lg glass-input" placeholder="Nama Anda beserta gelar"></div>
+                    <div><label class="block text-sm mb-1">NIP (Opsional)</label><input type="text" id="inp-nip" class="w-full p-2 rounded-lg glass-input" placeholder="-"></div>
+                    <div><label class="block text-sm mb-1">Integrasi Coding?</label>
+                        <select id="inp-coding" class="w-full p-2 rounded-lg glass-input text-slate-900">
+                            <option value="Tidak">Tidak</option>
+                            <option value="Ya">Ya (Unplugged/Scratch/Blockly)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 2. Pengaturan Cetak -->
+                <h2 class="text-xl font-bold text-sky-400 border-b border-slate-600 pb-2 mb-4">
+                    <i class="fa-solid fa-print mr-2"></i> 2. Pengaturan Cetak & Dokumen
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div><label class="block text-sm mb-1">Ukuran Kertas</label>
+                        <select id="inp-kertas" class="w-full p-2 rounded-lg glass-input text-slate-900">
+                            <option value="a4">A4 (Standar)</option>
+                            <option value="f4">F4 / Folio</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-4 mb-8">
+                    <!-- Kop Surat Checkbox -->
+                    <div class="p-4 rounded-lg bg-slate-800/50 border border-slate-700">
+                        <label class="flex items-center space-x-3 cursor-pointer mb-2">
+                            <input type="checkbox" id="chk-kop" class="w-5 h-5 rounded text-sky-500" onchange="togglePanel('panel-kop')">
+                            <span class="font-bold">Gunakan Kop Surat Instansi</span>
+                        </label>
+                        <div id="panel-kop" class="hidden grid grid-cols-1 gap-2 mt-3 pl-8">
+                            <input type="text" id="kop-1" class="w-full p-2 rounded glass-input text-sm" placeholder="Baris 1: PEMERINTAH KABUPATEN BANYUWANGI">
+                            <input type="text" id="kop-2" class="w-full p-2 rounded glass-input text-sm" placeholder="Baris 2: DINAS PENDIDIKAN">
+                            <input type="text" id="kop-3" class="w-full p-2 rounded glass-input text-sm" placeholder="Baris 3: SDN 1 CONTOH">
+                            <input type="text" id="kop-4" class="w-full p-2 rounded glass-input text-sm" placeholder="Baris 4: Alamat: Jl. Raya Pendidikan No.10">
+                        </div>
+                    </div>
+
+                    <!-- Lembar Pengesahan Checkbox -->
+                    <div class="p-4 rounded-lg bg-slate-800/50 border border-slate-700">
+                        <label class="flex items-center space-x-3 cursor-pointer mb-2">
+                            <input type="checkbox" id="chk-ttd" class="w-5 h-5 rounded text-sky-500" onchange="togglePanel('panel-ttd')">
+                            <span class="font-bold">Gunakan Lembar Pengesahan</span>
+                        </label>
+                        <div id="panel-ttd" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 pl-8">
+                            <div><label class="block text-xs mb-1">Tempat & Tanggal</label><input type="text" id="ttd-tgl" class="w-full p-2 rounded glass-input text-sm" placeholder="Banyuwangi, 15 Juli 2025"></div>
+                            <div><label class="block text-xs mb-1">Nama Kepala Sekolah</label><input type="text" id="ttd-kepsek" class="w-full p-2 rounded glass-input text-sm" placeholder="Nama Kepsek, S.Pd."></div>
+                            <div><label class="block text-xs mb-1">NIP Kepala Sekolah</label><input type="text" id="ttd-nip" class="w-full p-2 rounded glass-input text-sm" placeholder="1980..."></div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-generate" class="w-full relative overflow-hidden bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-6 rounded-xl transition duration-300 flex justify-center items-center gap-3 group">
+                    <span class="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></span>
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    GENERATE MODUL AJAR SEKARANG
+                </button>
+            </form>
+        </div>
+
+        <!-- Output Section (Hidden initially) -->
+        <div id="result-section" class="hidden fade-in mt-6">
+            
+            <!-- Action Toolbar -->
+            <div class="glass-panel p-4 mb-6 flex flex-wrap justify-between items-center gap-4 rounded-xl no-print">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-white">RPM Berhasil Dibuat!</h3>
+                        <p class="text-xs text-sky-200">Siap dicetak atau diunduh.</p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button onclick="downloadWord()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm transition flex items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-file-word"></i> Download Word
+                    </button>
+                    <button id="btn-pdf" onclick="downloadPDF()" class="bg-red-600 hover:bg-red-500 text-white px-4 py-2 rounded-lg text-sm transition flex items-center gap-2 shadow-lg">
+                        <i class="fa-solid fa-file-pdf"></i> Download PDF
+                    </button>
+                    <button onclick="window.print()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+                        <i class="fa-solid fa-print"></i> Print Langsung
+                    </button>
+                    <button onclick="location.reload()" class="bg-slate-800 border border-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm transition">
+                        <i class="fa-solid fa-rotate-left"></i> Edit Data
+                    </button>
+                </div>
+            </div>
+
+            <!-- Paper Canvas for Print/PDF -->
+            <div id="print-section" class="print-canvas rounded-xl text-slate-900 leading-relaxed font-serif relative">
+                <div id="document-content">
+                    <!-- Dynamic content will be injected here -->
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Aurora particle effect (Mouse follow)
+        document.addEventListener('mousemove', function(e) {
+            const container = document.getElementById('particles');
+            const particle = document.createElement('div');
+            particle.className = 'absolute w-2 h-2 rounded-full bg-sky-300 opacity-50 blur-[2px]';
+            particle.style.left = e.pageX + 'px';
+            particle.style.top = e.pageY + 'px';
+            container.appendChild(particle);
+            
+            setTimeout(() => {
+                particle.style.transition = 'all 0.5s ease';
+                particle.style.opacity = '0';
+                particle.style.transform = 'scale(2) translateY(-20px)';
+            }, 50);
+
+            setTimeout(() => { particle.remove(); }, 500);
+        });
+
+        // Toggle visibility of optional panels
+        function togglePanel(id) {
+            const el = document.getElementById(id);
+            el.classList.toggle('hidden');
+        }
+
+        // Generate RPM Logic
+        function generateRPM(e) {
+            e.preventDefault();
+            
+            // UI Transition
+            const btn = document.getElementById('btn-generate');
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> MEMPROSES DATA...';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                document.getElementById('setup-section').classList.add('hidden');
+                document.getElementById('result-section').classList.remove('hidden');
+                
+                buildDocument();
+                
+                // Adjust width based on paper size for preview
+                const kertas = document.getElementById('inp-kertas').value;
+                const canvas = document.getElementById('print-section');
+                if(kertas === 'f4') {
+                    canvas.style.maxWidth = '21.5cm';
+                    canvas.style.minHeight = '33cm';
+                } else {
+                    canvas.style.maxWidth = '21cm';
+                    canvas.style.minHeight = '29.7cm';
+                }
+            }, 1000);
+        }
+
+        // Build HTML for the Document
+        function buildDocument() {
+            // Get Values
+            const v = {
+                mapel: document.getElementById('inp-mapel').value,
+                topik: document.getElementById('inp-topik').value,
+                fase: document.getElementById('inp-fase').value,
+                kelas: document.getElementById('inp-kelas').value,
+                semester: document.getElementById('inp-semester').value,
+                ta: document.getElementById('inp-ta').value,
+                waktu: document.getElementById('inp-waktu').value,
+                model: document.getElementById('inp-model').value,
+                guru: document.getElementById('inp-guru').value,
+                nip: document.getElementById('inp-nip').value || "-",
+                coding: document.getElementById('inp-coding').value
+            };
+
+            // Style Variables untuk konsistensi ekspor ke Word dan PDF
+            const thStyleLeft = "background-color: #0284c7; color: #ffffff; text-align: left; font-weight: bold; padding: 8px; border: 1px solid #000000;";
+            const thStyleCenter = "background-color: #0284c7; color: #ffffff; text-align: center; font-weight: bold; padding: 8px; border: 1px solid #000000;";
+            const tdStyle = "padding: 8px; border: 1px solid #000000; vertical-align: top;";
+
+            let html = "";
+
+            // 1. Kop Surat
+            if(document.getElementById('chk-kop').checked) {
+                html += `
+                <div style="text-align: center; border-bottom: 3px solid black; padding-bottom: 10px; margin-bottom: 20px;">
+                    <h3 style="margin: 0; font-size: 14pt;">${document.getElementById('kop-1').value.toUpperCase()}</h3>
+                    <h2 style="margin: 0; font-size: 16pt; font-weight: bold;">${document.getElementById('kop-2').value.toUpperCase()}</h2>
+                    <h1 style="margin: 0; font-size: 18pt; font-weight: bold;">${document.getElementById('kop-3').value.toUpperCase()}</h1>
+                    <p style="margin: 5px 0 0 0; font-size: 11pt;">${document.getElementById('kop-4').value}</p>
+                </div>
+                `;
+            }
+
+            // 2. Judul & Identitas
+            html += `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="font-size: 14pt; font-weight: bold; margin: 0; text-decoration: underline;">RENCANA PEMBELAJARAN MENDALAM (RPM)</h2>
+                    <p style="font-size: 10pt; margin-top: 5px; color: #555;"><i>Dikembangkan oleh: Andri Ardi Wilandra (AI RPM Generator)</i></p>
+                </div>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">
+                    <tr><th colspan="3" style="${thStyleLeft}">I. IDENTITAS MODUL</th></tr>
+                    <tr><td style="${tdStyle} width: 25%;">Nama Penyusun</td><td style="${tdStyle} width: 2%; text-align: center;">:</td><td style="${tdStyle}"><b>${v.guru}</b></td></tr>
+                    <tr><td style="${tdStyle}">NIP</td><td style="${tdStyle} text-align: center;">:</td><td style="${tdStyle}">${v.nip}</td></tr>
+                    <tr><td style="${tdStyle}">Mata Pelajaran</td><td style="${tdStyle} text-align: center;">:</td><td style="${tdStyle}"><b>${v.mapel}</b></td></tr>
+                    <tr><td style="${tdStyle}">Fase / Kelas</td><td style="${tdStyle} text-align: center;">:</td><td style="${tdStyle}">Fase ${v.fase} / Kelas ${v.kelas}</td></tr>
+                    <tr><td style="${tdStyle}">Semester / TA</td><td style="${tdStyle} text-align: center;">:</td><td style="${tdStyle}">${v.semester} / ${v.ta}</td></tr>
+                    <tr><td style="${tdStyle}">Materi Pokok</td><td style="${tdStyle} text-align: center;">:</td><td style="${tdStyle}"><b>${v.topik}</b></td></tr>
+                    <tr><td style="${tdStyle}">Alokasi Waktu</td><td style="${tdStyle} text-align: center;">:</td><td style="${tdStyle}">${v.waktu} Menit</td></tr>
+                    <tr><td style="${tdStyle}">Model Belajar</td><td style="${tdStyle} text-align: center;">:</td><td style="${tdStyle}">${v.model}</td></tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">
+                    <tr><th style="${thStyleLeft}">II. CAPAIAN & TUJUAN PEMBELAJARAN</th></tr>
+                    <tr><td style="${tdStyle}">
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li style="margin-bottom: 5px;"><b>Capaian Pembelajaran:</b> Peserta didik mampu memahami konsep ${v.topik} dalam konteks ${v.mapel} dan mengaplikasikannya dalam kehidupan sehari-hari.</li>
+                            <li><b>Tujuan Pembelajaran:</b> Melalui model ${v.model}, peserta didik dapat menganalisis ${v.topik} dengan tepat, menyajikan hasil pengamatannya, serta menumbuhkan sikap kritis dan kolaboratif.</li>
+                        </ul>
+                    </td></tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">
+                    <tr><th style="${thStyleLeft}">III. 8 DIMENSI PROFIL LULUSAN</th></tr>
+                    <tr><td style="${tdStyle}">
+                        <p style="margin-top: 0; margin-bottom: 5px;">Dalam pembelajaran ini, dimensi utama yang dikembangkan adalah:</p>
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li><b>Penalaran Kritis:</b> Siswa dilatih memproses informasi tentang ${v.topik} dan memecahkan masalah.</li>
+                            <li><b>Kolaborasi:</b> Melalui kerja kelompok dan diskusi aktif antar teman sejawat.</li>
+                        </ul>
+                    </td></tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">
+                    <tr><th style="${thStyleLeft}">IV. 7 KEBIASAAN ANAK INDONESIA HEBAT</th></tr>
+                    <tr><td style="${tdStyle}">
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li><b>Gemar Belajar:</b> Siswa menunjukkan antusiasme mencari tahu konsep ${v.topik} secara mandiri.</li>
+                            <li><b>Bermasyarakat:</b> Membangun komunikasi positif dan empati saat berdiskusi.</li>
+                        </ul>
+                    </td></tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">
+                    <tr><th style="${thStyleLeft}">V. INTEGRASI LINTAS DISIPLIN ILMU</th></tr>
+                    <tr><td style="${tdStyle}">
+                        <p style="margin: 0; text-align: justify;">
+                            Pembelajaran materi ${v.topik} ini dihubungkan dengan <b>Bahasa Indonesia</b> (kemampuan presentasi dan menulis laporan), 
+                            serta <b>Karakter</b> (kedisiplinan dan tanggung jawab selama proses pengerjaan tugas).
+                        </p>
+                    </td></tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">
+                    <tr><th style="${thStyleLeft}">VI. SARANA PRASARANA & PENDEKATAN</th></tr>
+                    <tr><td style="${tdStyle}">
+                        <ul style="margin: 0; padding-left: 20px;">
+                            <li><b>Sarana:</b> Ruang kelas, proyektor/papan tulis, Lembar Kerja Peserta Didik (LKPD), dan perangkat multimedia.</li>
+                            <li><b>Pendekatan:</b> Pembelajaran Mendalam (Deep Learning) yang bersifat aktif, bermakna, reflektif, dan berpusat pada siswa.</li>
+                        </ul>
+                    </td></tr>
+                </table>
+            `;
+
+            if(v.coding === 'Ya') {
+                html += `
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">
+                    <tr><th style="${thStyleLeft}">VII. INTEGRASI COMPUTATIONAL THINKING & CODING</th></tr>
+                    <tr><td style="${tdStyle}">
+                        <p style="margin: 0; text-align: justify;">
+                            Aktivitas unplugged coding / logika sekuensial diterapkan di mana siswa memecah masalah ${v.topik} menjadi langkah-langkah sistematis (Dekomposisi & Algoritma).
+                        </p>
+                    </td></tr>
+                </table>`;
+            }
+
+            html += `
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">
+                    <tr><th colspan="4" style="${thStyleLeft}">VIII. PENGALAMAN BELAJAR (LANGKAH PEMBELAJARAN)</th></tr>
+                    <tr>
+                        <th style="${thStyleCenter} width: 15%;">Tahap</th>
+                        <th style="${thStyleCenter} width: 20%;">Prinsip</th>
+                        <th style="${thStyleCenter} width: 45%;">Kegiatan Pembelajaran (Aktivitas Siswa Dominan)</th>
+                        <th style="${thStyleCenter} width: 20%;">Sintak Model</th>
+                    </tr>
+                    <tr>
+                        <td style="${tdStyle}"><b>Pendahuluan</b><br>(15 Menit)</td>
+                        <td style="${tdStyle}">Eksplorasi Awal / Memahami</td>
+                        <td style="${tdStyle}">
+                            1. Guru membuka dengan doa dan cek kehadiran.<br>
+                            2. <b>Apersepsi:</b> Mengaitkan materi ${v.topik} dengan pengalaman nyata siswa.<br>
+                            3. <b>Pemantik:</b> Guru memberikan pertanyaan menantang yang memicu nalar kritis siswa.
+                        </td>
+                        <td style="${tdStyle}">Orientasi & Motivasi</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdStyle}"><b>Kegiatan Inti</b><br>(${v.waktu - 30} Menit)</td>
+                        <td style="${tdStyle}">Kolaborasi & Mengaplikasi</td>
+                        <td style="${tdStyle}">
+                            1. Siswa dibagi ke dalam kelompok kecil.<br>
+                            2. Siswa mengeksplorasi sumber belajar terkait ${v.topik}.<br>
+                            3. Secara kolaboratif, siswa memecahkan masalah pada LKPD.<br>
+                            4. Siswa mempresentasikan hasil temuan mereka di depan kelas.
+                        </td>
+                        <td style="${tdStyle}">Sesuai ${v.model}</td>
+                    </tr>
+                    <tr>
+                        <td style="${tdStyle}"><b>Penutup</b><br>(15 Menit)</td>
+                        <td style="${tdStyle}">Refleksi & Makna</td>
+                        <td style="${tdStyle}">
+                            1. Siswa bersama guru menyimpulkan inti pembelajaran.<br>
+                            2. Refleksi makna (Apa yang dipelajari hari ini dan manfaatnya).<br>
+                            3. Tindak lanjut dan salam penutup.
+                        </td>
+                        <td style="${tdStyle}">Generalisasi & Penutup</td>
+                    </tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">
+                    <tr><th style="${thStyleLeft}">IX. DUKUNGAN MEDIA & BAHAN AJAR</th></tr>
+                    <tr><td style="${tdStyle} background-color: #f8fafc;">
+                        <p style="margin-top: 0; margin-bottom: 5px;"><b>1. Prompt AI Gambar:</b><br><i>"Minimalist vector illustration, clean lines, educational style, bright colors, friendly for elementary school students, ${v.topik} concept, white background, NO text or labels"</i></p>
+                        <p style="margin-bottom: 0;"><b>2. Video Rekomendasi:</b><br>Pencarian YouTube: "Materi Edukasi Anak SD - ${v.topik}"</p>
+                    </td></tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">
+                    <tr><th colspan="3" style="${thStyleLeft}">X. ASESMEN & EVALUASI</th></tr>
+                    <tr>
+                        <th style="${thStyleCenter} width: 33%;">Asesmen Diagnostik</th>
+                        <th style="${thStyleCenter} width: 33%;">Asesmen Formatif</th>
+                        <th style="${thStyleCenter} width: 34%;">Asesmen Sumatif</th>
+                    </tr>
+                    <tr>
+                        <td style="${tdStyle}">Pertanyaan lisan pemantik di awal pelajaran untuk mengetahui kemampuan awal siswa.</td>
+                        <td style="${tdStyle}">Observasi kinerja selama diskusi kelompok dan keaktifan saat presentasi.</td>
+                        <td style="${tdStyle}">Tes tertulis singkat (pilihan ganda/isian) di akhir bab mengenai ${v.topik}.</td>
+                    </tr>
+                </table>
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px; font-size: 11pt;">
+                    <tr><th colspan="2" style="${thStyleLeft}">XI. REFLEKSI GURU & PESERTA DIDIK</th></tr>
+                    <tr>
+                        <th style="${thStyleCenter} width: 50%;">Refleksi Guru</th>
+                        <th style="${thStyleCenter} width: 50%;">Refleksi Peserta Didik</th>
+                    </tr>
+                    <tr>
+                        <td style="${tdStyle}">
+                            1. Apakah aktivitas pembelajaran memfasilitasi anak untuk aktif?<br>
+                            2. Apa kendala utama saat menjelaskan ${v.topik}?<br>
+                            3. Apa perbaikan untuk pertemuan selanjutnya?
+                        </td>
+                        <td style="${tdStyle}">
+                            1. Bagian mana yang paling kamu sukai hari ini?<br>
+                            2. Kesulitan apa yang kamu alami?<br>
+                            3. Bagaimana perasaanmu bekerja dalam kelompok?
+                        </td>
+                    </tr>
+                </table>
+            `;
+
+            // TTD Lembar Pengesahan
+            if(document.getElementById('chk-ttd').checked) {
+                let tgl = document.getElementById('ttd-tgl').value || "......................, ..................... 20..";
+                let kepsek = document.getElementById('ttd-kepsek').value || "...................................................";
+                let nipKepsek = document.getElementById('ttd-nip').value || "NIP. ..........................................";
+                
+                html += `
+                <div style="margin-top: 50px; width: 100%; display: flex; justify-content: space-between; font-size: 11pt; page-break-inside: avoid;">
+                    <div style="width: 45%; text-align: center;">
+                        <p>Mengetahui,</p>
+                        <p>Kepala Sekolah</p>
+                        <br><br><br><br>
+                        <p style="margin-bottom: 0;"><b>${kepsek}</b></p>
+                        <p style="margin-top: 0;">${nipKepsek}</p>
+                    </div>
+                    <div style="width: 45%; text-align: center;">
+                        <p>${tgl}</p>
+                        <p>Guru Mata Pelajaran</p>
+                        <br><br><br><br>
+                        <p style="margin-bottom: 0;"><b>${v.guru}</b></p>
+                        <p style="margin-top: 0;">NIP. ${v.nip}</p>
+                    </div>
+                </div>
+                `;
+            }
+
+            document.getElementById('document-content').innerHTML = html;
+        }
+
+        // Export to MS Word (.doc)
+        function downloadWord() {
+            const content = document.getElementById('document-content').innerHTML;
+            const styles = `
+            <style>
+                body { font-family: 'Times New Roman', Times, serif; line-height: 1.5; color: #000; }
+                h1, h2, h3, h4 { margin-top: 1em; margin-bottom: 0.5em; }
+                table { border-collapse: collapse; width: 100%; margin-bottom: 20px; font-size: 11pt; }
+                th, td { border: 1px solid #000; padding: 8px; text-align: left; vertical-align: top; }
+                ul, ol { margin-top: 0; margin-bottom: 10px; }
+            </style>`;
+            
+            const html = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Modul Ajar</title>" + styles + "</head><body>" + content + "</body></html>";
+
+            const blob = new Blob(['\ufeff', html], { type: 'application/msword' });
+            const url = URL.createObjectURL(blob);
+            const downloadLink = document.createElement("a");
+            
+            downloadLink.href = url;
+            downloadLink.download = 'Modul_Ajar_RPM.doc';
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            URL.revokeObjectURL(url);
+        }
+
+        // Export to PDF using html2pdf.js
+        function downloadPDF() {
+            const element = document.getElementById('print-section');
+            const kertas = document.getElementById('inp-kertas').value;
+            // Ukuran f4 dalam mm (215.9 x 330.2)
+            const formatSize = kertas === 'f4' ? [215.9, 330.2] : 'a4'; 
+
+            const opt = {
+                margin:       [15, 15, 15, 15],
+                filename:     'Modul_Ajar_RPM.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'mm', format: formatSize, orientation: 'portrait' }
+            };
+            
+            const btn = document.getElementById('btn-pdf');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memproses...';
+            btn.disabled = true;
+            
+            html2pdf().set(opt).from(element).save().then(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        }
+    </script>
+</body>
+</html>
